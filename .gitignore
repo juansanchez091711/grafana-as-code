@@ -12,6 +12,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 .examples/
+.claude/
 
 # Vars files with secrets
 *.auto.tfvars
