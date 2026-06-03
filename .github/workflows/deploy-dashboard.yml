@@ -1,0 +1,64 @@
+name: Deploy Dashboard (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      dashboard_name:
+        description: "Filename for the dashboard (without .json)"
+        required: true
+        type: string
+      dashboard_json:
+        description: "Dashboard JSON content encoded in base64"
+        required: true
+        type: string
+    secrets:
+      GRAFANA_URL:
+        required: true
+      GRAFANA_AUTH:
+        required: true
+      PROMETHEUS_URL:
+        required: true
+
+env:
+  TF_VERSION: "1.8.5"
+
+jobs:
+  deploy:
+    name: "${{ inputs.dashboard_name }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout grafana-as-code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/grafana-as-code
+
+      - name: Write dashboard from source repo
+        run: |
+          mkdir -p /tmp/dashboards
+          echo "${{ inputs.dashboard_json }}" | base64 -d > /tmp/dashboards/${{ inputs.dashboard_name }}.json
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var="dashboards_path=/tmp/dashboards" \
+            -target='grafana_dashboard.from_json["${{ inputs.dashboard_name }}.json"]' \
+            -out=tfplan
+        env:
+          TF_VAR_grafana_url: ${{ secrets.GRAFANA_URL }}
+          TF_VAR_grafana_auth: ${{ secrets.GRAFANA_AUTH }}
+          TF_VAR_prometheus_url: ${{ secrets.PROMETHEUS_URL }}
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan

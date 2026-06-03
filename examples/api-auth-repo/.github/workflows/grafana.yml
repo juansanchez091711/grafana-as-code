@@ -1,0 +1,42 @@
+name: Deploy Grafana Dashboard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "grafana/**"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Grafana
+    uses: YOUR_ORG/grafana-as-code/.github/workflows/deploy-dashboard.yml@main
+    with:
+      dashboard_name: api-auth
+      dashboard_json: ${{ needs.encode.outputs.json }}
+    secrets:
+      GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+      GRAFANA_AUTH: ${{ secrets.GRAFANA_AUTH }}
+      PROMETHEUS_URL: ${{ secrets.PROMETHEUS_URL }}
+
+# Si necesitas encodear el JSON primero, usa este job previo:
+# jobs:
+#   encode:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       json: ${{ steps.encode.outputs.json }}
+#     steps:
+#       - uses: actions/checkout@v4
+#       - id: encode
+#         run: echo "json=$(base64 -w 0 grafana/api-auth-dashboard.json)" >> $GITHUB_OUTPUT
+#
+#   deploy:
+#     needs: encode
+#     uses: YOUR_ORG/grafana-as-code/.github/workflows/deploy-dashboard.yml@main
+#     with:
+#       dashboard_name: api-auth
+#       dashboard_json: ${{ needs.encode.outputs.json }}
+#     secrets:
+#       GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+#       GRAFANA_AUTH: ${{ secrets.GRAFANA_AUTH }}
+#       PROMETHEUS_URL: ${{ secrets.PROMETHEUS_URL }}

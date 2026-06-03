@@ -1,0 +1,81 @@
+name: Terraform Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+  workflow_dispatch:
+
+env:
+  TF_VERSION: "1.8.5"
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    environment: grafana
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var="dashboards_path=/tmp/dashboards"
+        env:
+          TF_VAR_grafana_url: ${{ secrets.GRAFANA_URL }}
+          TF_VAR_grafana_auth: ${{ secrets.GRAFANA_AUTH }}
+          TF_VAR_prometheus_url: ${{ secrets.PROMETHEUS_URL }}
+
+  apply:
+    name: Apply
+    runs-on: ubuntu-latest
+    environment: grafana
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply (datasources only)
+        run: |
+          terraform apply -auto-approve \
+            -var="dashboards_path=/tmp/dashboards" \
+            -target=grafana_data_source.prometheus
+        env:
+          TF_VAR_grafana_url: ${{ secrets.GRAFANA_URL }}
+          TF_VAR_grafana_auth: ${{ secrets.GRAFANA_AUTH }}
+          TF_VAR_prometheus_url: ${{ secrets.PROMETHEUS_URL }}
