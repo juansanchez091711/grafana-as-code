@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(Remove-Item -Recurse -Force \"D:\\\\DevOps\\\\Github\\\\grafana-as-code\\\\dashboards\" -ErrorAction SilentlyContinue)",
-      "Bash(Write-Output \"done\")"
-    ]
-  }
-}

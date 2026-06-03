@@ -11,7 +11,7 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
-.examples/
+examples/
 .claude/
 
 # Vars files with secrets
